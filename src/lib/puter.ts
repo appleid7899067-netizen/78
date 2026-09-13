@@ -26,8 +26,22 @@ type PuterKvApi = {
   del: (key: string) => Promise<boolean | unknown>;
 };
 
+export type PuterAiModel = {
+  id: string;
+  provider?: string;
+  name?: string;
+  aliases?: string[];
+  cost?: {
+    input?: number;
+    output?: number;
+    tokens?: number;
+    currency?: string;
+  };
+};
+
 export type PuterChatOptions = {
   model?: string;
+  provider?: string;
   stream?: boolean;
   temperature?: number;
   testMode?: boolean;
@@ -36,6 +50,7 @@ export type PuterChatOptions = {
 
 type PuterAiApi = {
   chat: (prompt: string | PuterChatMessage[], options?: PuterChatOptions) => Promise<unknown>;
+  listModels?: (provider?: string | null) => Promise<PuterAiModel[]>;
 };
 
 export type PuterSDK = {
