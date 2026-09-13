@@ -86,17 +86,20 @@ async function consume(result: unknown, onDelta: (text: string) => void): Promis
 
 async function once(
   messages: PuterChatMessage[],
-  model: string,
+  model: FreeModel,
   testMode: boolean,
   stream: boolean,
   onDelta: (text: string) => void,
 ): Promise<string> {
   const puter = getPuter() ?? (await loadPuter());
   if (!puter.ai?.chat) throw new Error("Puter AI is not available yet.");
+
   const result = await puter.ai.chat(messages, {
-    model,
+    model: model.id,
+    provider: model.provider,
     stream,
-    temperature: 0.45,
+    // Qwen 3.6 works best with a conservative temperature for coding.
+    temperature: model.id === "qwen/qwen3.6-27b" ? 0.6 : 0.45,
     normalize: true,
     testMode,
   });
@@ -118,14 +121,17 @@ export async function chatWithFreeModel(opts: {
   const models = orderedModels(preferred);
   let lastError: unknown;
 
+  // Puter Login remains the authentication gate. The first candidate is
+  // Qwen 3.6 27B on Groq; if the connected Puter account does not expose
+  // Groq/Qwen, the normal Puter free-model fallback chain continues.
   for (const testMode of [false, true]) {
     for (const model of models) {
       try {
         let text = "";
         try {
-          text = await once(opts.messages, model.id, testMode, true, opts.onDelta);
+          text = await once(opts.messages, model, testMode, true, opts.onDelta);
         } catch {
-          text = await once(opts.messages, model.id, testMode, false, opts.onDelta);
+          text = await once(opts.messages, model, testMode, false, opts.onDelta);
         }
         if (!text) throw new Error("empty");
         setCachedModelId(model.id);
